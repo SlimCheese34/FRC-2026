@@ -7,6 +7,7 @@ import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.config.SparkMaxConfig;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
+import edu.wpi.first.wpilibj.motorcontrol.PWMVictorSPX;  // Fixed typo: "moter" -> "motor"
 
 public class Robot extends TimedRobot {
     // Left side - IDs 1 & 2
@@ -20,8 +21,15 @@ public class Robot extends TimedRobot {
     private final DifferentialDrive drive = new DifferentialDrive(leftLeader, rightLeader);
     private final XboxController controller = new XboxController(0);
 
+    public final double scale_factor = 0.5;
+    
+    // Intake/shooter motors
+    private PWMVictorSPX intakeMotor;
+    private PWMVictorSPX shooterMotor;
+
     @Override
     public void robotInit() {
+        // Drive train configuration
         SparkMaxConfig followerConfig = new SparkMaxConfig();
         followerConfig.idleMode(IdleMode.kBrake);
 
@@ -39,13 +47,33 @@ public class Robot extends TimedRobot {
 
         rightFollower.configure(followerConfig.follow(rightLeader),
             SparkMax.ResetMode.kResetSafeParameters, SparkMax.PersistMode.kPersistParameters);
+        
+        // Initialize intake/shooter motors
+        intakeMotor = new PWMVictorSPX(0);
+        shooterMotor = new PWMVictorSPX(1);  // Fixed typo: "shooterMOtor"
     }
 
     @Override
-    public void teleopPeriodic() {
+    public void teleopPeriodic() {  //
+        // Drive control
         drive.arcadeDrive(
-            -controller.getLeftY(),
-            controller.getRightX()
+            (controller.getLeftY() * scale_factor),
+            (-controller.getRightX() * scale_factor)
         );
+
+        // Intake mode using button A (everything spins inward)
+        if (controller.getAButton()) {
+            intakeMotor.set(-0.4);    // Spin in
+            shooterMotor.set(0.4);   // Also spin in
+        }
+        // Shoot mode - motors spin opposite to bring pelota up
+        else if (controller.getBButton()) {
+            intakeMotor.set(-0.4);    
+            shooterMotor.set(-0.4);  
+        }
+        else {
+            intakeMotor.set(0.0);    
+            shooterMotor.set(0.0);   
+        }
     }
 }
